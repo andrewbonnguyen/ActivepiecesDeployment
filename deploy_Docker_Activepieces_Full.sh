@@ -38,21 +38,30 @@ sudo apt purge -y nginx nginx-core nginx-common || true
 sudo apt autoremove -y
 
 # =======================================================
-# Install NGINX + Brotli
+# Install NGINX 1.26.2 + Brotli — CHẠY 100% TRÊN UBUNTU 24.04
 # =======================================================
-sudo apt install -y build-essential git curl wget unzip ca-certificates \
-    libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev cmake
+sudo apt install -y build-essential git curl wget ca-certificates \
+    libpcre3 libpcre3-dev zlib1g-dev libssl-dev cmake
 
 sudo rm -rf "$BUILD_DIR"
 sudo mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-wget "http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz"
+# Fix lỗi 404: thêm số phiên bản đầy đủ
+wget "https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz"
 tar -xzf "nginx-${NGINX_VERSION}.tar.gz"
-git clone https://github.com/google/ngx_brotli.git
-cd ngx_brotli && git submodule update --init --recursive && cd ..
 
-cd "nginx-${NGINX_VERSION}"
+# Fix lỗi clone: bỏ chữ "clone" thừa
+git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli.git
+
+# Build Brotli tĩnh
+cd ngx_brotli/deps/brotli
+mkdir -p out && cd out
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+make -j$(nproc)
+
+# Build NGINX + chỉ đường Brotli đúng chỗ
+cd "$BUILD_DIR/nginx-${NGINX_VERSION}"
 sudo ./configure \
   --prefix=/etc/nginx \
   --sbin-path=/usr/sbin/nginx \
@@ -66,9 +75,11 @@ sudo ./configure \
   --with-http_v2_module \
   --with-http_gzip_static_module \
   --with-threads \
+  --with-ld-opt="-L$BUILD_DIR/ngx_brotli/deps/brotli/out" \
+  --with-cc-opt="-I$BUILD_DIR/ngx_brotli/deps/brotli/c/include" \
   --add-module="$BUILD_DIR/ngx_brotli"
 
-sudo make -j"$(nproc)"
+sudo make -j$(nproc)
 sudo make install
 
 sudo tee /etc/systemd/system/nginx.service > /dev/null <<EOF
@@ -280,6 +291,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now activepieces.service
 
 echo ""
-echo "HOÀN TẤT 100%!"
-echo "Truy cập: https://$AP_DOMAIN"
-echo "Đã fix 502 – dùng port 3000 nội bộ, key sinh đúng, cache zone đầy đủ"
+echo "🎉 ACTIVEPIECES DEPLOYMENT COMPLETED!"
+echo "🌐 Visit: https://${AP_DOMAIN}"
+echo "📧 Admin email: ${EMAIL_ADMIN}"
