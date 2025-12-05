@@ -38,7 +38,7 @@ sudo apt purge -y nginx nginx-core nginx-common || true
 sudo apt autoremove -y
 
 # =======================================================
-# Install NGINX + Brotli (giữ nguyên như cũ)
+# Install NGINX + Brotli
 # =======================================================
 sudo apt install -y build-essential git curl wget unzip ca-certificates \
     libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev cmake
@@ -129,7 +129,7 @@ services:
     container_name: activepieces
     restart: always
     ports:
-      - "127.0.0.1:3000:80"                 # sửa 8080 → 3000 (hoặc bất kỳ port nào chưa dùng)
+      - "127.0.0.1:3000:80"                 #3000 (hoặc bất kỳ port nào chưa dùng)
     environment:
       - AP_DB_TYPE=postgres
       - AP_POSTGRES_HOST=postgres
@@ -233,7 +233,7 @@ server {
     client_max_body_size 50M;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;            # sửa thành 3000
+        proxy_pass http://127.0.0.1:3000;            # port 3000
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
